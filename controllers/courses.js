@@ -60,6 +60,15 @@ exports.addCourse = asyncHandler(async (req, res, next) => {
 			404
 		);
 	}
+	//make sure bootcamp belongs to the logged in user
+	if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+		return next(
+			new ErrorResponse(
+				`User with id of ${req.user.id} is not authorised to add a course to bootcamp`,
+				401
+			)
+		);
+	}
 
 	const course = await Course.create(req.body);
 
@@ -80,6 +89,16 @@ exports.updateCourse = asyncHandler(async (req, res, next) => {
 		return next(
 			new errorResponse(`No course with the id of ${req.params.id}`),
 			404
+		);
+	}
+
+	//make sure bootcamp belongs to the logged in user
+	if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+		return next(
+			new ErrorResponse(
+				`User with id of ${req.user.id} is not authorised to update course to bootcamp`,
+				401
+			)
 		);
 	}
 
@@ -105,6 +124,16 @@ exports.deleteCourse = asyncHandler(async (req, res, next) => {
 		return next(
 			new errorResponse(`No course with the id of ${req.params.id}`),
 			404
+		);
+	}
+
+	//make sure bootcamp belongs to the logged in user
+	if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+		return next(
+			new ErrorResponse(
+				`User with id of ${req.user.id} is not authorised to delete a course to bootcamp`,
+				401
+			)
 		);
 	}
 

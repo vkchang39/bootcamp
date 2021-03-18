@@ -35,6 +35,19 @@ exports.getBootcamp = asyncHandler(async (req, res, next) => {
 // @route   POST api/v1/bootcamps
 // @access  Private
 exports.createBootcamp = asyncHandler(async (req, res, next) => {
+	req.body.user = req.user.id;
+
+	const publishedBootcamp = await Bootcamp.findOne({ user: req.user.id });
+
+	if (!publishedBootcamp && req.user.role !== "admin") {
+		return next(
+			new ErrorResponse(
+				`user with id with ${req.user.id} has already published a bootcamp`,
+				400
+			)
+		);
+	}
+
 	const bootcamp = await Bootcamp.create(req.body);
 	res.status(201).json({ success: true, msg: bootcamp });
 });
@@ -43,10 +56,8 @@ exports.createBootcamp = asyncHandler(async (req, res, next) => {
 // @route   PUT api/v1/bootcamps/:id
 // @access  Private
 exports.updateBootcamp = asyncHandler(async (req, res, next) => {
-	const bootcamp = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, {
-		new: true,
-		runValidators: true,
-	});
+	let bootcamp = await Bootcamp.findById(req.params.id);
+
 	if (!bootcamp) {
 		return next(
 			new ErrorResponse(
@@ -55,6 +66,22 @@ exports.updateBootcamp = asyncHandler(async (req, res, next) => {
 			)
 		);
 	}
+
+	//make sure bootcamp belongs to the logged in user
+	if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+		return next(
+			new ErrorResponse(
+				`User with id of ${req.params.id} is not authorised to update this bootcamp`,
+				401
+			)
+		);
+	}
+
+	bootcamp = await Bootcamp.findOneAndUpdate(req.params.id, req.body, {
+		new: true,
+		runValidators: true,
+	});
+
 	res.status(200).json({
 		success: true,
 		data: bootcamp,
@@ -65,7 +92,7 @@ exports.updateBootcamp = asyncHandler(async (req, res, next) => {
 // @route   DELETE api/v1/bootcamps/:id
 // @access  Private
 exports.deleteBootcamp = asyncHandler(async (req, res, next) => {
-	const bootcamp = await Bootcamp.findByIdAndDelete(req.params.id);
+	const bootcamp = await Bootcamp.findById(req.params.id);
 	if (!bootcamp) {
 		return next(
 			new ErrorResponse(
@@ -74,36 +101,24 @@ exports.deleteBootcamp = asyncHandler(async (req, res, next) => {
 			)
 		);
 	}
+
+	//make sure bootcamp belongs to the logged in user
+	if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+		return next(
+			new ErrorResponse(
+				`User with id of ${req.params.id} is not authorised to delete this bootcamp`,
+				401
+			)
+		);
+	}
+
+	bootcamp.remove();
+
 	res.status(200).json({
 		success: true,
 		msg: `Deleted Bootcamp ${req.params.id}`,
 	});
 });
-
-// @desc    Get Bootcamp with in a radius.
-// @route   DELETE api/v1/bootcamps/radius/:zipcode/:distance
-// @access  Private
-// exports.getBootcampsInRadius = asyncHandler(async (req, res, next) => {
-// 	const { zipcode, distance } = req.params;
-// 	//console.log(zipcode, distance);
-
-// 	//get lang/lat from geocode
-// 	const loc = await geocoder.geocode(zipcode);
-// 	const lng = loc[0].longitude;
-// 	const lat = loc[0].latitude;
-
-// 	const radius = distance / 3963;
-// 	console.log(lng, lat, radius);
-// 	const bootcamps = await Bootcamp.find({
-// 		location: { $geoWithin: { $centerSphere: [[lng, lat], radius] } },
-// 	});
-
-// 	res.status(200).json({
-// 		success: true,
-// 		count: bootcamps.length,
-// 		data: bootcamps,
-// 	});
-// });
 
 exports.getBootcampsInRadius = asyncHandler(async (req, res, next) => {
 	const { zipcode, distance } = req.params;
@@ -139,6 +154,16 @@ exports.bootcampPhotoUpload = asyncHandler(async (req, res, next) => {
 			new ErrorResponse(
 				`Bootcamp not found wit id of ${req.params.id}`,
 				404
+			)
+		);
+	}
+
+	//make sure bootcamp belongs to the logged in user
+	if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+		return next(
+			new ErrorResponse(
+				`User with id of ${req.params.id} is not authorised to update this bootcamp`,
+				401
 			)
 		);
 	}
