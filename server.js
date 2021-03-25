@@ -3,6 +3,12 @@ const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
 const colors = require("colors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const hpp = require("hpp");
+const cors = require("cors");
+const xss = require("xss-clean");
+const mongoSanitize = require("express-mongo-sanitize");
 const fileUpload = require("express-fileupload");
 const cookieParser = require("cookie-parser");
 const errorHandler = require("./middleware/error");
@@ -13,6 +19,8 @@ dotenv.config({ path: "./config/config.env" });
 
 //Connect DB
 connectDB();
+
+app.use(xss());
 
 // Route file
 const bootcamps = require("./routes/bootcamps");
@@ -28,6 +36,22 @@ app.use(express.json());
 
 // cookie Parser
 app.use(cookieParser());
+
+// sanitize data
+app.use(mongoSanitize());
+
+app.use(helmet());
+
+// rate limiter
+const limiter = rateLimit({
+	windowMs: 10 * 60 * 1000,
+	max: 100,
+});
+app.use(limiter);
+
+app.use(hpp());
+
+app.use(cors());
 
 // Dev logging middleware
 if (process.env.NODE_ENV === "development") {
